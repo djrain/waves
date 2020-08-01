@@ -33,15 +33,19 @@ In this framework, a tutorial is essentially made up of 3 things:
 
 You'll need all 3 of these things to make a tutorial that does anything useful!
 
-![Tutorial Graph]({{ site.baseurl }}/assets/djrain/interactive-tutorials-graph.png){:style="width: 100%"}
+It's helpful to visualize a tutorial as a directed graph. In this graph, the nodes are what we're calling states, and the edges are our triggers:
 
-You can think of triggers and visualeffects as being contained inside of states. However, they can also belong to multiple states at once. So there is a many-to-many relationship between states and triggers, and between states and visualeffects.
+![Tutorial Graph]({{ site.baseurl }}/assets/djrain/interactive-tutorials-graph.png){:style="width: 80%"}
+
+One can see the flexibility of this system. It supports complex, nonlinear tutorials out of the box. Notice how states can have multiple triggers, to multiple different states. Also note that triggers can be reused between different states (such as Trigger A in the example above). 
+
+Visualeffects are not pictured in this graph, but you can imagine them existing inside of the individual states. Actually, both triggers and visualeffects exist only within states. So each state has a conceptual list of triggers, and a list of visualeffects, that will all activate when the state is entered (and deactivate when the state is exited).
 
 
 
-## Getting Started
+## Preview
 
-The code for a very simple tutorial might look something like this (method arguments are omitted for now):
+The code for a very simple tutorial might look something like this (the method arguments are omitted for now):
 ```C++
 Tutorial tut();
 
@@ -59,12 +63,34 @@ tut.AddPopoverEffect(...);
 tut.StartAtState(...);
 ```
 
-As you can see, the **Tutorial** class provides the entire programming interface for the tutorial. Everything you do to manage your tutorial will be done via method calls on this object.
+As you can see, the **Tutorial** class provides the entire programming interface for the tutorial. Everything you do to manage your tutorial will be done via method calls on this object. :open_mouth:	
 
-Now let's take a closer look at how this all works.
+Most Tutorial methods can be chained, so you could also write that same code like this:
+
+```C++
+Tutorial tut();
+
+tut.AddState(...)
+.AddState(...)
+.AddState(...);
+
+tut.AddManualTrigger(...)
+.AddEventListenerTrigger(...);
+
+tut.AddCSSEffect(...)
+.AddOverlayEffect(...)
+.AddPopoverEffect(...);
+
+tut.StartAtState(...);
+```
+
+Now let's take a closer look at how this all works!
+
+<br>
+<br>
 
 ## Tutorial Class
-To start creating a tutorial, you must instantiate a Tutorial object. This is simple:
+To begin, you must instantiate a Tutorial object. This is simple:
 ```C++
 Tutorial tut;
 ```
@@ -72,23 +98,23 @@ Tutorial tut;
 
 ## States
 
-An active tutorial is always in a certain state. For example, you might have a state where you wait for the user to click a particular button. Just having a state by itself is pretty much useless though. A state gains meaning by having triggers and visualeffects associated with it.
+An active tutorial is always in a certain state. For example, you might have a state where you wait for the user to click a particular button. Of course, just having a state by itself is pretty much useless :stuck_out_tongue_closed_eyes: A state gains meaning by having triggers and visualeffects associated with it. But we'll get to those shortly.
 
 <br>
 
 ### Creating States
-To create and add a state to the tutorial, simply call Addstate() and give your new state a unique string identifier:
+To create and add a state to the tutorial, simply call Addstate() and give your new state a unique name:
 ```C++
 tut.AddState("start_state");
 ```
 
-We can now refer to this state in our other method calls.
+We can now refer to this state in our other method calls. 😎
 
 <br>
 
 ### End States
 
-A state that does not contain any triggers is called an end state. If an end state is entered, the tutorial will stop.
+A state that does not contain any triggers is called an end state. If an end state is entered, the tutorial will automatically stop. This means you don't have to do anything special to make a state an end state! :)
 
 <br>
 <br>
@@ -97,17 +123,17 @@ A state that does not contain any triggers is called an end state. If an end sta
 
 Triggers are things that move the tutorial from one state to another when they are "fired". 
 * There are a few built-in trigger types, or you can define custom trigger types. 
-* The same trigger may be reused for multiple states.
+* The same trigger may be reused in multiple states!
 
 <br>
 
 ### Trigger Parameters
 
-All Add...Trigger() methods have some parameters in common. These are:
+All methods for adding triggers require the following parameters:
 
 * current_state - name of the state that this trigger should be activated for.
-* next_state - name of the state that the tutorial should move to when this trigger fires.
-* trigger_id - (optional) a unique string ID for this trigger.
+* next_state - name of the state that the tutorial should switch to when this trigger fires.
+* trigger_id - (optional for all but custom triggers) a unique string ID for this trigger.
 * callback - (optional) a callback function to be called when this trigger fires. The function must return void and have no parameters.
 
 <br>
@@ -115,7 +141,7 @@ All Add...Trigger() methods have some parameters in common. These are:
 ### Built-in Triggers
 
 #### ManualTrigger
-The simplest type of trigger is the ManualTrigger. It only fires when you fire it manually from your code. 
+The simplest type of trigger is the ManualTrigger. It only fires when you fire it manually from your code. Amazing, right?
 
 ```C++
 tut.AddEventManualtrigger(state, next_state, trigger_id, callback);
@@ -124,7 +150,9 @@ tut.AddEventManualtrigger(state, next_state, trigger_id, callback);
 <br>
 
 #### EventListenerTrigger
-The EventListenerTrigger listens for the given html event on an Empirical widget, and fires when the event occurs.
+The EventListenerTrigger listens for the given html event on an Empirical widget, and fires when the event occurs. 
+
+You might use it to move to the next state when a button is clicked.
 
 ```C++
 tut.AddEventListenerTrigger(state, next_state, widget, event_name, trigger_id, callback);
@@ -142,7 +170,7 @@ To create a custom trigger, define a class that inherits from trigger:
 ```C++
 class CustomTrigger : public Trigger {
 
-    friend class tutorial;
+    friend class Tutorial;
     friend class State;
 
     Customtrigger(...) {};
@@ -154,9 +182,15 @@ class CustomTrigger : public Trigger {
 
 * The friend declarations are necessary, and the Activate/Deactivate methods must be defined. 
 * Activate() is called every time a state containing the trigger is entered. It will also be called immediately if a trigger is added to the current state.
-* Deactivate() is called when a state containing the trigger is exited.
+* Deactivate() is called when a state containing the trigger is exited, or when the trigger is removed.
 
-(todo: adding custom triggers)
+Then, to add your custom trigger:
+```C++
+tut.AddCustomTrigger(current_state, next_state, custom_arg_1, custom_arg_2, ..., trigger_id, callback);
+```
+* Between next_state and trigger_id, you supply the arguments to the custom trigger you defined.
+* In order to avoid potential conflicts with custom parameters, the trigger_id is **required** for custom triggers. The callback, as always, is optional.
+
 <br>
 
 ### Reusing Triggers
@@ -197,10 +231,10 @@ A visualeffect is any visual change made to your web page within the context of 
 
 ### VisualEffect Parameters
 
-All Add...Effect() methods have the following parameters in common:
+All methods for adding visualeffects require the following parameters:
 
 * current_state - name of the state that this visualeffect should be added to.
-* visual_id - (optional) a unique string ID for this visualeffect.
+* visual_id - (optional for all but custom visualeffects) a unique string ID for this visualeffect.
 
 ### Built-in VisualEffects
 
@@ -221,16 +255,18 @@ The given attribute will be reverted back to its previous state when the effect 
 #### OverlayEffect
 An OverlayEffect adds a colored overlay on top of everything else on the page. 
 ```C++
-tut.AddOverlayEffect(current_state, color, opacity, z-index, visual_id);
+tut.AddOverlayEffect(current_state, parent, color, opacity, z-index, intercept_mouse, visual_id);
 ```
+_parent_ is the Div you want the overlay to be added to. Typically, the Document (which is a Div) where all your widgets live works fine here.
 
-* _color_ is the CSS string describing the color of the overlay
-* _opacity_ is a float for the opacity of the overlay
-* _z-index_ is the z-index of the overlay
+Optional parameters:
+* _color_ is the CSS string describing the color of the overlay. Default = "black"
+* _opacity_ is a float for the opacity of the overlay. Default = 0.4
+* _z-index_ is the z-index of the overlay. Default = 1000
+* _intercept_mouse_ is a bool indicating whether or not the overlay should receive pointer events. Can be set to prevent elements under the overlay from being clicked. Default = false
 
-This effect can be used to draw a user's attention to a particular widget (you can make the widget appear above the overlay using a CSSEffect to change its z-index).
+This effect is an easy way to help draw a user's attention to a particular widget (you can make the widget appear above the overlay using a CSSEffect to change its z-index).
 
-It can also serve to "disable" any widgets below the overlay, as they will not be able to receive input.
 
 <br>
 
@@ -241,7 +277,7 @@ To create a custom visualeffect, define a class that inherits from visualeffect:
 ```C++
 class CustomVisualEffect : public VisualEffect {
 
-    friend class tutorial;
+    friend class Tutorial;
     friend class State;
 
     CustomVisualEffect(...) {};
@@ -253,13 +289,13 @@ class CustomVisualEffect : public VisualEffect {
 
 * The friend declarations are necessary, and the Activate/Deactivate methods must be defined. 
 * Activate() is called every time a state containing the visualeffect is entered. It will also be called immediately if a visualeffect is added to the current state.
-* Deactivate() is called when a state containing the visualeffect is exited.
+* Deactivate() is called when a state containing the visualeffect is exited, or when the visualeffect is removed.
 
 ### Adding Custom VisualEffects
 ```C++
-tut.AddCustomVisualEffect(current_state, visual_id);
+tut.AddCustomVisualEffect(current_state, custom_arg_1, custom_arg_2, ..., visual_id);
 ```
-
+* As with custom triggers, the visual_id is **required** for custom visualeffects.
 
 <br>
 
@@ -311,10 +347,12 @@ Any trigger or state can be provided a callback function.
 * For states, the callback will be called when the state is entered.
 * For triggers, the callback will be called when the trigger fires (but before the next state is entered).
 
+One potential use for callbacks is disabling any widgets that are not involved in the current state.
+
 ### Setting Callbacks
 You can set callbacks when the state/trigger is added, by providing the optional callback argument that you saw in previous sections.
 
-You can also set a callback at any time using the SetstateCallback() / SetTriggerCallback() methods:
+You can also set a callback at any time using the SetStateCallback() / SetTriggerCallback() methods:
 ```C++
 tut.SetstateCallback(state_id, callback);
 ```
@@ -332,9 +370,19 @@ tut.SetTriggerCallback(trigger_id, callback);
 
 ### Difficulties and Future Directions
 
+We encountered several obstacles while working on this project. 
+
+The first issue was that Empirical's Listeners class could only apply a single event handler for any event at a time. This was a problem because our EventListenerTrigger needed to add its own event handlers, in addition to any that the user may have set. So first, we enhanced the Listeners class to support adding any number of event handlers.
+
+The second big issue, which we weren't able to address, is that Empirical's web system does not play nicely with JavaScript code. Any changes made to a widget's properties must be made from the C++ side, or else those changes will be wiped out when Empirical redraws the widget. This caused us quite a bit of confusion before we identified the issue, and it also prevented us from being able to implement a JavaScript popover library. Popovers are probably the most useful feature that the library is currently lacking, so we hope that the necessary changes to support this can be made to Empirical.
+
+We're not sure whether a system like this might also be useful for native Empirical apps. The high-level framework is not web-specific, so this is a potential area of development. 
+
 
 ### Acknowledgements
 
-I'd like to give credit to Austin Ferguson (@FergusonAJ) for being an excellent mentor on this project. He came up with the rough outline for this system, and contributed to every aspect of its design, as well as some of the code itself. Thanks also to everyone on the WAVES team who helped with advice, tips, and feedback.
+I'd like to give credit to Austin Ferguson (@FergusonAJ) for being an excellent mentor on this project. He came up with the rough outline for the system, and contributed to every aspect of its design, as well as some of the code itself! 
 
-This project gave me the opportunity to learn a lot about web development, the Empirical library, and contributing to real-life distributed software. I hope that our contribution will prove to be a valuable addition to the library. 
+Thanks also to everyone on the WAVES team who helped with advice, tips, and feedback. :blush:	
+
+This project gave me the opportunity to learn a lot about web development, Empirical, and contributing to real-life distributed software. I hope that our contribution will prove to be a valuable addition to the library. 
