@@ -25,11 +25,14 @@ However, creating an interactive tutorial can be a decent bit of extra work. The
 
 So here we have a tutorial... about how to create tutorials. Ironically, this is a written, non-interactive guide. But hopefully it will serve as a useful reference and introduction to the tutorial system.
 
+<br>
+<br>
+
 ## Conceptual Structure of a Tutorial
 In this framework, a tutorial is essentially made up of 3 things:
-* **states** - the different states your tutorial can move between.
-* **triggers** - events or actions that move the tutorial from one state to another.
-* **visualeffects** - any visual changes made to the web app as part of the tutorial.
+* **States** - the different states your tutorial can move between.
+* **Triggers** - events or actions that move the tutorial from one state to another.
+* **VisualEffects** - any visual changes made to the web app as part of the tutorial.
 
 You'll need all 3 of these things to make a tutorial that does anything useful!
 
@@ -41,7 +44,8 @@ One can see the flexibility of this system. It supports complex, nonlinear tutor
 
 Visualeffects are not pictured in this graph, but you can imagine them existing inside of the individual states. Actually, both triggers and visualeffects exist only within states. So each state has a list of triggers, and a list of visualeffects, that will all be activated when the state is entered (and deactivated when the state is exited).
 
-
+<br>
+<br>
 
 ## Code Preview
 
@@ -90,15 +94,18 @@ Now let's take a closer look at how this all works!
 <br>
 
 ## Tutorial Class
-To begin, you must instantiate a Tutorial object. This is simple:
+To begin, you must instantiate a Tutorial object. This is easy:
 ```C++
 Tutorial tut;
 ```
 
+As stated before, all setup and manipulation of the tutorial will be done through this object.
+<br>
+<br>
 
 ## States
 
-An active tutorial is always in a certain state. For example, you might have a state where you wait for the user to click a particular button. Of course, just having a state by itself is pretty much useless :stuck_out_tongue_closed_eyes: 
+An active tutorial is always in a certain state. For example, you might have a state where you wait for the user to click a particular button. Of course, just having a state by itself is pretty much useless. :stuck_out_tongue_closed_eyes: 
 
 A state gains meaning by having triggers and visualeffects associated with it. But we'll get to those shortly.
 
@@ -110,7 +117,7 @@ To create and add a state to the tutorial, simply call AddState() and give your 
 tut.AddState("start_state");
 ```
 
-We can now refer to this state in our other method calls. 😎
+We can now refer to this state in our other method calls. :sunglasses:	
 
 <br>
 
@@ -242,6 +249,7 @@ All methods for adding visualeffects use the following parameters:
 
 * current_state - name of the state that this visualeffect should be added to.
 * visual_id - (optional for all but custom visualeffects) a unique string ID for this visualeffect.
+<br>
 
 ### Built-in VisualEffects
 
@@ -264,7 +272,7 @@ An OverlayEffect adds a colored overlay on top of everything else on the page.
 ```C++
 tut.AddOverlayEffect(current_state, parent, color, opacity, z-index, intercept_mouse, visual_id);
 ```
-_parent_ is the Div you want the overlay to be added to. Typically, the Document (which is a Div) where all your widgets live works fine here.
+* _parent_ is the Div you want the overlay to be added to. Typically, the Document (which is a Div) where all your widgets live works fine here.
 
 Optional parameters:
 * _color_ is the CSS string describing the color of the overlay. Default = "black"
@@ -280,9 +288,9 @@ This effect is an easy way to help draw a user's attention to a particular widge
 
 #### PopoverEffect (Experimental)
 
-PopoverEffect is essentially a message bubble that you can set to appear over a particular widget. This is super handy because it serves as a visual cue while also providing useful text information to the user. It's named after the Bootstrap Popover class, because that's what we hoped to use within our class. 
+PopoverEffect is essentially a message bubble that you can set to appear over a particular widget. This would be super handy because it serves as a visual cue while also providing useful text information to the user. It's named after the Bootstrap Popover class, because that's what we hoped to use within our class. 
 
-Unfortunately, we weren't able to get the Bootstrap working, because of some restrictions currently within Empirical (described in more detail [here](#difficulties-and-future-directions))
+Unfortunately, we weren't able to make the Bootstrap popovers work, because of some restrictions currently within Empirical (described [here](#difficulties-and-future-directions))
 
 We began trying to create a custom popover class using Empirical functionality, but it turns out to be no trivial task to get these working reliably. So this feature is not really usable as of now. :frowning_face:
 
@@ -290,7 +298,7 @@ We began trying to create a custom popover class using Empirical functionality, 
 
 ### Custom VisualEffects
 
-To create a custom visualeffect, define a class that inherits from visualeffect:
+To create a custom visualeffect, define a class that inherits from VisualEffect:
 
 ```C++
 class CustomVisualEffect : public VisualEffect {
@@ -309,7 +317,7 @@ class CustomVisualEffect : public VisualEffect {
 * Activate() is called every time a state containing the visualeffect is entered. It will also be called immediately if a visualeffect is added to the current state.
 * Deactivate() is called when a state containing the visualeffect is exited, or when the visualeffect is removed.
 
-### Adding Custom VisualEffects
+Then, to add your custom visualeffect:
 ```C++
 tut.AddCustomVisualEffect(current_state, custom_arg_1, custom_arg_2, ..., visual_id);
 ```
@@ -382,8 +390,90 @@ tut.SetTriggerCallback(trigger_id, callback);
 <br>
 
 
+## Full Code Example
 
-### Difficulties and Future Directions
+Here is a full, runnable example of app with a tutorial. This app doesn't do anything meaningful, but hopefully it's helpful :)
+
+Our app has two widgets, a button and an input text box. Our tutorial will involve have two steps:
+1. Click the button.
+2. Type something into the text box and press enter.
+
+We'll use an EventListenerTrigger for the button, and a ManualTrigger for the text box.
+
+For visuals, we simply use two OverlayEffects to dim out everything but the widget for each step, combined with CSSEffects to pop the widgets above. We set intercept_mouse to true for the overlays, so that we can't click on anything below.
+
+```C++
+
+#include "web/web.h"
+#include "web/KeypressManager.h"
+#include <iostream>
+#include "web/Tutorial.h"
+
+namespace UI = emp::web;
+
+UI::Document doc("emp_base");
+UI::Button my_button([](){}, "Click me!");
+UI::Input my_input([](std::string s){}, "text", "");
+
+Tutorial tut;
+
+
+void OnInputEnter(UI::KeyboardEvent evt) {
+
+    if (evt.keyCode == 13) {
+
+        std::string inputStr = my_input.GetCurrValue();
+
+        if (!inputStr.empty())
+            tut.FireTrigger("enter_input_trigger");
+    }
+}
+
+void PrintComplete() { std::cout << "Tutorial Complete!" << std::endl; }
+
+
+
+int main() {
+
+    doc << my_button;
+    doc << my_input;
+
+    my_input.On("keypress", &OnInputEnter);
+    
+    // since z-index can only be set on positioned elements...
+    my_button.SetCSS("position", "relative");
+    my_input.SetCSS("position", "relative");
+    
+
+    tut.AddState("first_state");
+    tut.AddState("second_state");
+    tut.AddState("end_state", &PrintComplete);
+
+    tut.AddEventListenerTrigger("first_state", "second_state", my_button, "click");
+    tut.AddManualTrigger("second_state", "end_state", "enter_input_trigger");
+
+    tut.AddOverlayEffect("first_state", doc, "black", 0.5, 1000, true);
+    tut.AddCSSEffect("first_state", my_button, "z-index", "10000");
+
+    tut.AddOverlayEffect("second_state", doc, "blue", 0.5, 1000, true);
+    tut.AddCSSEffect("second_state", my_input, "z-index", "10000");
+
+    tut.StartAtState("first_state");
+    
+}
+
+```
+
+
+If you click the button, then enter something in the text box, you should see "Tutorial Complete" printed to the console!
+
+And there you have it, a complete tutorial created with exactly 14 lines of code! :sunglasses:	
+
+
+<br>
+<br>
+
+## Difficulties and Future Directions
 
 We encountered several obstacles while working on this project. 
 
@@ -393,8 +483,9 @@ The second big issue, which we weren't able to address, is that Empirical's web 
 
 We're not sure whether a system like this might also be useful for native Empirical apps. The high-level framework is not web-specific, so this may be an area for potential development. 
 
+<br>
 
-### Acknowledgements
+## Acknowledgements
 
 I'd like to give credit to Austin Ferguson (@FergusonAJ) for being an excellent mentor on this project. He came up with the rough outline for the system, and contributed to every aspect of its design, as well as some of the code itself! 
 
