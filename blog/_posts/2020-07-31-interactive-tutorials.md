@@ -100,6 +100,25 @@ Tutorial tut;
 ```
 
 As stated before, all setup and manipulation of the tutorial will be done through this object.
+
+### Starting the Tutorial
+The tutorial does not become active until you start it. To do this, you call StartAtState(), and provide it the name of a state:
+```C++
+tut.StartAtState("add_task");
+```
+
+This will activate all visualeffects and triggers in the given state.
+
+<br>
+
+### Stopping the Tutorial
+The tutorial will stop automatically if an end state is entered. But if you wish to stop it manually:
+
+```C++
+tut.Stop();
+```
+
+This will deactivate all visuals and triggers in the current state.
 <br>
 <br>
 
@@ -249,6 +268,7 @@ All methods for adding visualeffects use the following parameters:
 
 * current_state - name of the state that this visualeffect should be added to.
 * visual_id - (optional for all but custom visualeffects) a unique string ID for this visualeffect.
+
 <br>
 
 ### Built-in VisualEffects
@@ -344,29 +364,6 @@ Note that this will deactivate the visualeffect if it is active.
 <br>
 <br>
 
-
-## Tutorial Flow
-### Starting the Tutorial
-The tutorial does not become active until you start it. To do this, you call StartAtstate(), and provide it the name of a state:
-```C++
-tut.StartAtState("add_task");
-```
-
-This will activate all visualeffects and triggers in the given state.
-
-<br>
-
-### Stopping the Tutorial
-The tutorial will stop automatically if an end state is entered. But if you wish to stop it manually:
-
-```C++
-tut.Stop();
-```
-
-This will deactivate all visuals and triggers in the current state.
-
-
-<br>
 
 ## Callbacks
 Any trigger or state can be provided a callback function. 
