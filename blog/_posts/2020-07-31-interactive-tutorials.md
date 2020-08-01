@@ -17,9 +17,9 @@ As web apps become bigger and more complex, it becomes more and more important t
 
 Well produced documentation can mitigate the first three issues, but even the best written docs can't solve the last two.
 
-This is where interactive tutorials come in.
+This is where interactive tutorials come in. :raised_hands:	
 
-Interactive tutorials are becoming increasingly common. Big name apps like Photoshop, Slack, Discord, and many others provide interactive tutorials. I think we can safely say they're the gold standard when it comes to showing users the basics of your app, or even more!
+Interactive tutorials are becoming increasingly common. Big name apps like Photoshop, Slack, Discord, and many others provide interactive tutorials. I think we can safely say they're the gold standard when it comes to showing users the basics of your app, or even beyond!
 
 However, creating an interactive tutorial can be a decent bit of extra work. Therefore, we've created this library to streamline the process for Empirical web apps. It's a flexible and extensible system for creating virtually any kind of interactive tutorial.
 
@@ -39,14 +39,14 @@ It's helpful to visualize a tutorial as a directed graph. In this graph, the nod
 
 One can see the flexibility of this system. It supports complex, nonlinear tutorials out of the box. Notice how states can have multiple triggers, to multiple different states. Also note that triggers can be reused between different states (such as Trigger A in the example above). 
 
-Visualeffects are not pictured in this graph, but you can imagine them existing inside of the individual states. Actually, both triggers and visualeffects exist only within states. So each state has a conceptual list of triggers, and a list of visualeffects, that will all activate when the state is entered (and deactivate when the state is exited).
+Visualeffects are not pictured in this graph, but you can imagine them existing inside of the individual states. Actually, both triggers and visualeffects exist only within states. So each state has a list of triggers, and a list of visualeffects, that will all be activated when the state is entered (and deactivated when the state is exited).
 
 
 
-## Preview
+## Code Preview
 
 The code for a very simple tutorial might look something like this (the method arguments are omitted for now):
-```C++
+```c++
 Tutorial tut();
 
 tut.AddState(...);
@@ -58,7 +58,7 @@ tut.AddEventListenerTrigger(...);
 
 tut.AddCSSEffect(...);
 tut.AddOverlayEffect(...);
-tut.AddPopoverEffect(...);
+tut.AddCustomVisualEffect(...);
 
 tut.StartAtState(...);
 ```
@@ -98,12 +98,14 @@ Tutorial tut;
 
 ## States
 
-An active tutorial is always in a certain state. For example, you might have a state where you wait for the user to click a particular button. Of course, just having a state by itself is pretty much useless :stuck_out_tongue_closed_eyes: A state gains meaning by having triggers and visualeffects associated with it. But we'll get to those shortly.
+An active tutorial is always in a certain state. For example, you might have a state where you wait for the user to click a particular button. Of course, just having a state by itself is pretty much useless :stuck_out_tongue_closed_eyes: 
+
+A state gains meaning by having triggers and visualeffects associated with it. But we'll get to those shortly.
 
 <br>
 
 ### Creating States
-To create and add a state to the tutorial, simply call Addstate() and give your new state a unique name:
+To create and add a state to the tutorial, simply call AddState() and give your new state a unique name:
 ```C++
 tut.AddState("start_state");
 ```
@@ -122,17 +124,20 @@ A state that does not contain any triggers is called an end state. If an end sta
 ## Triggers
 
 Triggers are things that move the tutorial from one state to another when they are "fired". 
-* There are a few built-in trigger types, or you can define custom trigger types. 
-* The same trigger may be reused in multiple states!
+
+With the exception of manual firing, triggers must be active in order to fire. States automatically activate all their triggers upon being entered.
+
+There are a few built-in trigger types, or you can define custom trigger types. 
+
 
 <br>
 
 ### Trigger Parameters
 
-All methods for adding triggers require the following parameters:
+All methods for adding triggers use the following parameters:
 
 * current_state - name of the state that this trigger should be activated for.
-* next_state - name of the state that the tutorial should switch to when this trigger fires.
+* next_state - name of the state that the tutorial should move to when this trigger fires.
 * trigger_id - (optional for all but custom triggers) a unique string ID for this trigger.
 * callback - (optional) a callback function to be called when this trigger fires. The function must return void and have no parameters.
 
@@ -204,10 +209,10 @@ tut.AddExistingTrigger(current_state, next_state, trigger_id);
 ### Manually Firing Triggers
 All triggers can be manually fired, as long as you have their trigger ID:
 ```C++
-tut.Firetrigger(trigger_id);
+tut.FireTrigger(trigger_id);
 ```
 
-This should only be done if you are certain that the current state contains the trigger.
+This must only be done for triggers in the current state, but the trigger does _not_ have to be currently active.
 
 <br>
 
@@ -224,14 +229,16 @@ Note that this will deactivate the trigger if it is active.
 ## VisualEffects
 
 A visualeffect is any visual change made to your web page within the context of the tutorial. 
-* This could be adding an element to the page, changing the CSS styling of an element, or anything you want via a custom visualeffect class. 
-* The same trigger may be added to multiple states.
+
+This could be adding an element to the page, changing the CSS styling of an element, or anything you want via a custom visualeffect class!
+
+As with triggers, states automatically activate all their visualeffects upon being entered.
 
 <br>
 
 ### VisualEffect Parameters
 
-All methods for adding visualeffects require the following parameters:
+All methods for adding visualeffects use the following parameters:
 
 * current_state - name of the state that this visualeffect should be added to.
 * visual_id - (optional for all but custom visualeffects) a unique string ID for this visualeffect.
@@ -267,6 +274,17 @@ Optional parameters:
 
 This effect is an easy way to help draw a user's attention to a particular widget (you can make the widget appear above the overlay using a CSSEffect to change its z-index).
 
+
+<br>
+
+
+#### PopoverEffect (Experimental)
+
+PopoverEffect is essentially a message bubble that you can set to appear over a particular widget. This is super handy because it serves as a visual cue while also providing useful text information to the user. It's named after the Bootstrap Popover class, because that's what we hoped to use within our class. 
+
+Unfortunately, we weren't able to get the Bootstrap working, because of some restrictions currently within Empirical (described in more detail [here](#difficulties-and-future-directions))
+
+We began trying to create a custom popover class using Empirical functionality, but it turns out to be no trivial task to get these working reliably. So this feature is not really usable as of now. :frowning_face:
 
 <br>
 
@@ -320,7 +338,7 @@ Note that this will deactivate the visualeffect if it is active.
 
 
 ## Tutorial Flow
-### Starting the tutorial
+### Starting the Tutorial
 The tutorial does not become active until you start it. To do this, you call StartAtstate(), and provide it the name of a state:
 ```C++
 tut.StartAtState("add_task");
@@ -331,6 +349,7 @@ This will activate all visualeffects and triggers in the given state.
 <br>
 
 ### Stopping the Tutorial
+The tutorial will stop automatically if an end state is entered. But if you wish to stop it manually:
 
 ```C++
 tut.Stop();
@@ -338,8 +357,7 @@ tut.Stop();
 
 This will deactivate all visuals and triggers in the current state.
 
-The tutorial will automatically stop if a state is entered that does not contain any triggers. This would be expected if a user completed the tutorial.
-<br>
+
 <br>
 
 ## Callbacks
@@ -354,7 +372,7 @@ You can set callbacks when the state/trigger is added, by providing the optional
 
 You can also set a callback at any time using the SetStateCallback() / SetTriggerCallback() methods:
 ```C++
-tut.SetstateCallback(state_id, callback);
+tut.SetStateCallback(state_id, callback);
 ```
 
 ```C++
@@ -363,9 +381,6 @@ tut.SetTriggerCallback(trigger_id, callback);
 <br>
 <br>
 
-### Full Code Example
-
-(todo)
 
 
 ### Difficulties and Future Directions
@@ -374,9 +389,9 @@ We encountered several obstacles while working on this project.
 
 The first issue was that Empirical's Listeners class could only apply a single event handler for any event at a time. This was a problem because our EventListenerTrigger needed to add its own event handlers, in addition to any that the user may have set. So first, we enhanced the Listeners class to support adding any number of event handlers.
 
-The second big issue, which we weren't able to address, is that Empirical's web system does not play nicely with JavaScript code. Any changes made to a widget's properties must be made from the C++ side, or else those changes will be wiped out when Empirical redraws the widget. This caused us quite a bit of confusion before we identified the issue, and it also prevented us from being able to implement a JavaScript popover library. Popovers are probably the most useful feature that the library is currently lacking, so we hope that the necessary changes to support this can be made to Empirical.
+The second big issue, which we weren't able to address, is that Empirical's web system does not play nicely with JavaScript code. Any changes made to a widget's properties must be made from the C++ side, or else those changes will be wiped out when Empirical redraws the widget. This caused us quite a bit of confusion before we identified the issue, and it also prevented us from being able to implement a JavaScript popover library. Popovers are probably the most useful feature that the system is currently lacking, so we hope that the necessary changes to support this can be made to Empirical.
 
-We're not sure whether a system like this might also be useful for native Empirical apps. The high-level framework is not web-specific, so this is a potential area of development. 
+We're not sure whether a system like this might also be useful for native Empirical apps. The high-level framework is not web-specific, so this may be an area for potential development. 
 
 
 ### Acknowledgements
